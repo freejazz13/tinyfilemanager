@@ -1,9 +1,9 @@
 <?php
 //Default Configuration
-$CONFIG = '{"lang":"en","error_reporting":false,"show_hidden":false,"hide_Cols":false,"theme":"light"}';
+$CONFIG = '{"lang":"en","error_reporting":false,"show_hidden":true,"hide_Cols":true,"theme":"light"}';
 
 /**
- * H3K ~ Tiny File Manager V2.6
+ * H3K - Tiny File Manager V2.6
  * @author CCP Programmers
  * @github https://github.com/prasathmani/tinyfilemanager
  * @link https://tinyfilemanager.github.io
@@ -20,7 +20,8 @@ define('APP_TITLE', 'Tiny File Manager');
 // Auth with login/password
 // set true/false to enable/disable it
 // Is independent from IP white- and blacklisting
-$use_auth = true;
+$use_auth = false;
+//$use_auth = true;
 
 // Login user name and password
 // Users: array('Username' => 'Password', 'Username2' => 'Password2', ...)
@@ -60,11 +61,12 @@ $default_timezone = 'Etc/UTC'; // UTC
 // Root path for file manager
 // use absolute path of directory i.e: '/var/www/folder' or $_SERVER['DOCUMENT_ROOT'].'/folder'
 //make sure update $root_url in next section
-$root_path = $_SERVER['DOCUMENT_ROOT'];
+//$root_path = $_SERVER['DOCUMENT_ROOT']';
+$root_path = '/media/KINGSTON';
 
 // Root url for links in file manager.Relative to $http_host. Variants: '', 'path/to/subfolder'
 // Will not working if $root_path will be outside of server document root
-$root_url = '';
+$root_url = '/KINGSTON';
 
 // Server hostname. Can set manually if wrong
 // $_SERVER['HTTP_HOST'].'/folder'
@@ -97,7 +99,7 @@ $allowed_upload_extensions = '';
 $favicon_path = '';
 
 // Files and folders to excluded from listing
-// e.g. array('myfile.html', 'personal-folder', '*.php', '/path/to/folder', ...)
+// e.g. array('myfile.html', 'personal-folder', '*.php', ...)
 $exclude_items = array();
 
 // Online office Docs Viewer
@@ -257,7 +259,7 @@ if (empty($auth_users)) {
     $use_auth = false;
 }
 
-$is_https = isset($_SERVER['HTTPS']) && (strtolower($_SERVER['HTTPS']) == 'on' || $_SERVER['HTTPS'] == 1)
+$is_https = isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on' || $_SERVER['HTTPS'] == 1)
     || isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https';
 
 // update $root_url based on user specific directories
@@ -459,7 +461,7 @@ unset($p, $use_auth, $iconv_input_encoding, $use_highlightjs, $highlightjs_style
 /*************************** ACTIONS ***************************/
 
 // Handle all AJAX Request
-if ((isset($_SESSION[FM_SESSION_ID]['logged'], $auth_users[$_SESSION[FM_SESSION_ID]['logged']]) || !FM_USE_AUTH) && isset($_POST['ajax'], $_POST['token'])) {
+if ((isset($_SESSION[FM_SESSION_ID]['logged'], $auth_users[$_SESSION[FM_SESSION_ID]['logged']]) || !FM_USE_AUTH) && isset($_POST['ajax'], $_POST['token']) && !FM_READONLY) {
     if (!verifyToken($_POST['token'])) {
         header('HTTP/1.0 401 Unauthorized');
         die("Invalid Token.");
@@ -470,10 +472,6 @@ if ((isset($_SESSION[FM_SESSION_ID]['logged'], $auth_users[$_SESSION[FM_SESSION_
         $dir = $_POST['path'] == "." ? '' : $_POST['path'];
         $response = scan(fm_clean_path($dir), $_POST['content']);
         echo json_encode($response);
-        exit();
-    }
-
-    if(FM_READONLY){
         exit();
     }
 
@@ -810,7 +808,6 @@ if (isset($_POST['file'], $_POST['copy_to'], $_POST['finish'], $_POST['token']) 
 
     if (!verifyToken($_POST['token'])) {
         fm_set_msg(lng('Invalid Token.'), 'error');
-        die("Invalid Token.");
     }
 
     // from
@@ -880,7 +877,6 @@ if (isset($_POST['file'], $_POST['copy_to'], $_POST['finish'], $_POST['token']) 
 if (isset($_POST['rename_from'], $_POST['rename_to'], $_POST['token']) && !FM_READONLY) {
     if (!verifyToken($_POST['token'])) {
         fm_set_msg("Invalid Token.", 'error');
-        die("Invalid Token.");
     }
     // old name
     $old = urldecode($_POST['rename_from']);
@@ -928,6 +924,15 @@ if (isset($_GET['dl'], $_POST['token'])) {
         $path .= '/' . FM_PATH;
     }
 
+    if ($dl != '' && is_dir($path . '/' . $dl)) {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        // Call the download function
+        fm_download_dir($path . '/' . $dl, $dl); // Download with a buffer size of 1024 bytes
+        exit;
+	}
     // Check if the file exists and is valid
     if ($dl != '' && is_file($path . '/' . $dl)) {
         // Close the session to prevent session locking
@@ -1095,7 +1100,6 @@ if (isset($_POST['group'], $_POST['delete'], $_POST['token']) && !FM_READONLY) {
 
     if (!verifyToken($_POST['token'])) {
         fm_set_msg(lng("Invalid Token."), 'error');
-        die("Invalid Token.");
     }
 
     $path = FM_ROOT_PATH;
@@ -1132,7 +1136,6 @@ if (isset($_POST['group'], $_POST['token']) && (isset($_POST['zip']) || isset($_
 
     if (!verifyToken($_POST['token'])) {
         fm_set_msg(lng("Invalid Token."), 'error');
-        die("Invalid Token.");
     }
 
     $path = FM_ROOT_PATH;
@@ -1197,7 +1200,6 @@ if (isset($_POST['unzip'], $_POST['token']) && !FM_READONLY) {
 
     if (!verifyToken($_POST['token'])) {
         fm_set_msg(lng("Invalid Token."), 'error');
-        die("Invalid Token.");
     }
 
     $unzip = urldecode($_POST['unzip']);
@@ -1268,7 +1270,6 @@ if (isset($_POST['chmod'], $_POST['token']) && !FM_READONLY && !FM_IS_WIN) {
 
     if (!verifyToken($_POST['token'])) {
         fm_set_msg(lng("Invalid Token."), 'error');
-        die("Invalid Token.");
     }
 
     $path = FM_ROOT_PATH;
@@ -1344,7 +1345,7 @@ $objects = is_readable($path) ? scandir($path) : array();
 $folders = array();
 $files = array();
 $current_path = array_slice(explode("/", $path), -1)[0];
-if (is_array($objects) && fm_is_exclude_items($current_path, $path)) {
+if (is_array($objects) && fm_is_exclude_items($current_path)) {
     foreach ($objects as $file) {
         if ($file == '.' || $file == '..') {
             continue;
@@ -1353,9 +1354,9 @@ if (is_array($objects) && fm_is_exclude_items($current_path, $path)) {
             continue;
         }
         $new_path = $path . '/' . $file;
-        if (@is_file($new_path) && fm_is_exclude_items($file, $new_path)) {
+        if (@is_file($new_path) && fm_is_exclude_items($file)) {
             $files[] = $file;
-        } elseif (@is_dir($new_path) && $file != '.' && $file != '..' && fm_is_exclude_items($file, $new_path)) {
+        } elseif (@is_dir($new_path) && $file != '.' && $file != '..' && fm_is_exclude_items($file)) {
             $folders[] = $file;
         }
     }
@@ -1650,7 +1651,7 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                         </div>
                     </div>
 
-                    <small class="text-body-secondary">* <?php echo lng('Sometimes the save action may not work on the first try, so please attempt it again') ?>.</small>
+                    <small class="text-body-secondary">* <?php echo lng('Sometimes the save action may not work on the first try, so please attempt it again') ?>.</span>
                 </form>
             </div>
         </div>
@@ -1722,7 +1723,7 @@ if (isset($_GET['view'])) {
     $file = $_GET['view'];
     $file = fm_clean_path($file, false);
     $file = str_replace('/', '', $file);
-    if ($file == '' || !is_file($path . '/' . $file) || !fm_is_exclude_items($file, $path . '/' . $file)) {
+    if ($file == '' || !is_file($path . '/' . $file) || !fm_is_exclude_items($file)) {
         fm_set_msg(lng('File not found'), 'error');
         $FM_PATH = FM_PATH;
         fm_redirect(FM_SELF_URL . '?p=' . urlencode($FM_PATH));
@@ -1779,9 +1780,8 @@ if (isset($_GET['view'])) {
                 <li class="list-group-item active" aria-current="true"><strong><?php echo lng($view_title) ?>:</strong> <?php echo fm_enc(fm_convert_win($file)) ?></li>
                 <?php $display_path = fm_get_display_path($file_path); ?>
                 <li class="list-group-item"><strong><?php echo $display_path['label']; ?>:</strong> <?php echo $display_path['path']; ?></li>
-                <li class="list-group-item"><strong><?php echo lng('Date Modified') ?>:</strong> <?php echo date(FM_DATETIME_FORMAT, filemtime($file_path)); ?></li>
-                <li class="list-group-item"><strong><?php echo lng('File size') ?>:</strong> <?php echo ($filesize_raw <= 1000) ? "$filesize_raw bytes" : $filesize; ?></li>
-                <li class="list-group-item"><strong><?php echo lng('MIME-type') ?>:</strong> <?php echo $mime_type ?></li>
+                <li class="list-group-item"><strong>File size:</strong> <?php echo ($filesize_raw <= 1000) ? "$filesize_raw bytes" : $filesize; ?></li>
+                <li class="list-group-item"><strong>MIME-type:</strong> <?php echo $mime_type ?></li>
                 <?php
                 // ZIP info
                 if (($is_zip || $is_gzip) && $filenames !== false) {
@@ -1928,7 +1928,7 @@ if (isset($_GET['edit']) && !FM_READONLY) {
     $file = $_GET['edit'];
     $file = fm_clean_path($file, false);
     $file = str_replace('/', '', $file);
-    if ($file == '' || !is_file($path . '/' . $file) || !fm_is_exclude_items($file, $path . '/' . $file)) {
+    if ($file == '' || !is_file($path . '/' . $file) || !fm_is_exclude_items($file)) {
         fm_set_msg(lng('File not found'), 'error');
         $FM_PATH = FM_PATH;
         fm_redirect(FM_SELF_URL . '?p=' . urlencode($FM_PATH));
@@ -2164,25 +2164,18 @@ $all_files_size = 0;
                 $filesize_raw = "";
                 $filesize = lng('Folder');
                 $perms = substr(decoct(fileperms($path . '/' . $f)), -4);
-                $owner = array('name' => '?'); 
-                $group = array('name' => '?');
                 if (function_exists('posix_getpwuid') && function_exists('posix_getgrgid')) {
-                    try {
-                        $owner_id = fileowner($path . '/' . $f);
-                        if ($owner_id != 0) {
-                            $owner_info = posix_getpwuid($owner_id);
-                            if ($owner_info) {
-                                $owner =  $owner_info;
-                            }
-                        }
-                        $group_id = filegroup($path . '/' . $f);
-                        $group_info = posix_getgrgid($group_id);
-                        if ($group_info) {
-                            $group =  $group_info;
-                        }
-                    } catch (Exception $e) {
-                        error_log("exception:" . $e->getMessage());
+                    $owner = posix_getpwuid(fileowner($path . '/' . $f));
+                    $group = posix_getgrgid(filegroup($path . '/' . $f));
+                    if ($owner === false) {
+                        $owner = array('name' => '?');
                     }
+                    if ($group === false) {
+                        $group = array('name' => '?');
+                    }
+                } else {
+                    $owner = array('name' => '?');
+                    $group = array('name' => '?');
                 }
             ?>
                 <tr>
@@ -2218,6 +2211,7 @@ $all_files_size = 0;
                             <a title="<?php echo lng('CopyTo') ?>..." href="?p=&amp;copy=<?php echo urlencode(trim(FM_PATH . '/' . $f, '/')) ?>"><i class="fa fa-files-o" aria-hidden="true"></i></a>
                         <?php endif; ?>
                         <a title="<?php echo lng('DirectLink') ?>" href="<?php echo fm_enc(FM_ROOT_URL . (FM_PATH != '' ? '/' . FM_PATH : '') . '/' . $f . '/') ?>" target="_blank"><i class="fa fa-link" aria-hidden="true"></i></a>
+                        <a title="<?php echo lng('Download as TAR') ?>" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;dl=<?php echo urlencode($f) ?>" onclick="confirmDailog(event, 1211, '<?php echo lng('Download'); ?>','<?php echo urlencode($f); ?>', this.href);"><i class="fa fa-download"></i></a>
                     </td>
                 </tr>
             <?php
@@ -2236,25 +2230,18 @@ $all_files_size = 0;
                 $filelink = '?p=' . urlencode(FM_PATH) . '&amp;view=' . urlencode($f);
                 $all_files_size += $filesize_raw;
                 $perms = substr(decoct(fileperms($path . '/' . $f)), -4);
-                $owner = array('name' => '?'); 
-                $group = array('name' => '?');
                 if (function_exists('posix_getpwuid') && function_exists('posix_getgrgid')) {
-                    try {
-                        $owner_id = fileowner($path . '/' . $f);
-                        if ($owner_id != 0) {
-                            $owner_info = posix_getpwuid($owner_id);
-                            if ($owner_info) {
-                                $owner =  $owner_info;
-                            }
-                        }
-                        $group_id = filegroup($path . '/' . $f);
-                        $group_info = posix_getgrgid($group_id);
-                        if ($group_info) {
-                            $group =  $group_info;
-                        }
-                    } catch (Exception $e) {
-                        error_log("exception:" . $e->getMessage());
+                    $owner = posix_getpwuid(fileowner($path . '/' . $f));
+                    $group = posix_getgrgid(filegroup($path . '/' . $f));
+                    if ($owner === false) {
+                        $owner = array('name' => '?');
                     }
+                    if ($group === false) {
+                        $group = array('name' => '?');
+                    }
+                } else {
+                    $owner = array('name' => '?');
+                    $group = array('name' => '?');
                 }
             ?>
                 <tr>
@@ -2675,13 +2662,12 @@ function fm_get_display_path($file_path)
 
 /**
  * Check file is in exclude list
- * @param string $name The name of the file/folder
- * @param string $path The full path of the file/folder
+ * @param string $file
  * @return bool
  */
-function fm_is_exclude_items($name, $path)
+function fm_is_exclude_items($file)
 {
-    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
     if (isset($exclude_items) and sizeof($exclude_items)) {
         unset($exclude_items);
     }
@@ -2690,7 +2676,7 @@ function fm_is_exclude_items($name, $path)
     if (version_compare(PHP_VERSION, '7.0.0', '<')) {
         $exclude_items = unserialize($exclude_items);
     }
-    if (!in_array($name, $exclude_items) && !in_array("*.$ext", $exclude_items) && !in_array($path, $exclude_items)) {
+    if (!in_array($file, $exclude_items) && !in_array("*.$ext", $exclude_items)) {
         return true;
     }
     return false;
@@ -3310,7 +3296,7 @@ function fm_get_file_mimes($extension)
     $fileTypes['divx'] = 'video/x-msvideo';
 
     $fileTypes['mp3'] = 'audio/mpeg';
-    $fileTypes['mp4'] = 'video/mp4';
+    $fileTypes['mp4'] = 'audio/mpeg';
     $fileTypes['mpeg'] = 'video/mpeg';
     $fileTypes['mpg'] = 'video/mpeg';
     $fileTypes['mpe'] = 'video/mpeg';
@@ -3366,7 +3352,34 @@ function scan($dir = '', $filter = '')
  * If streaming - videos will show as videos, images as images
  * instead of download prompt
  * https://stackoverflow.com/a/13821992/1164642
+
+ J 2025: added download DIR as TAR!
  */
+function fm_download_dir($dirLocation, $dirName){
+    if (connection_status() != 0)
+        return false;
+
+    $tgz = $dirName . '.tar';
+
+    // Extract parent dir and last component
+    $parent = dirname($dirLocation);
+    $base   = basename($dirLocation);
+
+    header('Content-Type: application/x-tar');
+    header(sprintf(
+        'Content-Disposition: attachment; filename="%s"',
+        $tgz
+    ));
+
+    ob_flush();
+
+    // POSIX-portable: cd via -C, archive only last directory
+    passthru('/bin/tar -C ' . escapeshellarg($parent) . ' -c - ' . escapeshellarg($base));
+
+    return ((connection_status() == 0) && !connection_aborted());
+}
+
+
 function fm_download_file($fileLocation, $fileName, $chunkSize  = 1024)
 {
     if (connection_status() != 0)
@@ -3409,13 +3422,7 @@ function fm_download_file($fileLocation, $fileName, $chunkSize  = 1024)
 
     $contentDisposition = 'attachment';
 
-    if (strstr($_SERVER['HTTP_USER_AGENT'], "MSIE")) {
-        $fileName = preg_replace('/\./', '%2e', $fileName, substr_count($fileName, '.') - 1);
-        header("Content-Disposition: $contentDisposition;filename=\"$fileName\"");
-    } else {
-        header("Content-Disposition: $contentDisposition;filename=\"$fileName\"");
-    }
-
+    header("Content-Disposition: $contentDisposition;filename=\"$fileName\"");
     header("Accept-Ranges: bytes");
     $range = 0;
 
@@ -3773,8 +3780,7 @@ function fm_show_nav_path($path)
                             <a class="nav-link dropdown-toggle" id="navbarDropdownMenuLink-5" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fa fa-user-circle"></i>
                             </a>
-
-                            <div class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="navbarDropdownMenuLink-5" data-bs-theme="<?php echo FM_THEME; ?>">
+                            <div class="dropdown-menu text-small shadow" aria-labelledby="navbarDropdownMenuLink-5" data-bs-theme="<?php echo FM_THEME; ?>">
                                 <?php if (!FM_READONLY): ?>
                                     <a title="<?php echo lng('Settings') ?>" class="dropdown-item nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;settings=1"><i class="fa fa-cog" aria-hidden="true"></i> <?php echo lng('Settings') ?></a>
                                 <?php endif ?>
@@ -3834,6 +3840,9 @@ function fm_show_header_login()
         <?php if ($favicon_path) {
             echo '<link rel="icon" href="' . fm_enc($favicon_path) . '" type="image/png">';
         } ?>
+<link id="favicon" rel="shortcut icon" type="image/png" href="data:image/png;base64,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">
+	<!--<link id="favicon" rel="shortcut icon" type="image/png" href="data:image/png;base64,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">
+	-->
         <title><?php echo fm_enc(APP_TITLE) ?></title>
         <?php print_external('pre-jsdelivr'); ?>
         <?php print_external('css-bootstrap'); ?>
@@ -3997,6 +4006,7 @@ function fm_show_header_login()
         <?php if ($favicon_path) {
             echo '<link rel="icon" href="' . fm_enc($favicon_path) . '" type="image/png">';
         } ?>
+<link id="favicon" rel="shortcut icon" type="image/png" href="data:image/png;base64,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">
         <title><?php echo fm_enc(APP_TITLE) ?> | <?php echo (isset($_GET['view']) ? $_GET['view'] : ((isset($_GET['edit'])) ? $_GET['edit'] : "H3K")); ?></title>
         <?php print_external('pre-jsdelivr'); ?>
         <?php print_external('pre-cloudflare'); ?>
@@ -5597,9 +5607,6 @@ function fm_show_header_login()
         $tr['en']['File or folder with this path already exists']   = 'File or folder with this path already exists';
         $tr['en']['Are you sure want to rename?']                   = 'Are you sure want to rename?';
         $tr['en']['Are you sure want to']                           = 'Are you sure want to';
-        $tr['en']['Date Modified']                                  = 'Date Modified';
-        $tr['en']['File size']                                      = 'File size';
-        $tr['en']['MIME-type']                                      = 'MIME-type';
 
         $i18n = fm_get_translations($tr);
         $tr = $i18n ? $i18n : $tr;
