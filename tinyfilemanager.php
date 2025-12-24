@@ -2667,6 +2667,11 @@ function fm_get_display_path($file_path)
  */
 function fm_is_exclude_items($file)
 {
+   // J: exclude all dotfiles
+    if ($file[0] === '.') {
+        return false;
+    }
+
     $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
     if (isset($exclude_items) and sizeof($exclude_items)) {
         unset($exclude_items);
